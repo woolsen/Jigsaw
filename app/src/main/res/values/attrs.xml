@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="Jigsaw">
+        <attr name="columnCount" format="integer" />
+        <attr name="rowCount" format="integer" />
+        <attr name="image" format="reference" />
+    </declare-styleable>
+
+    <style name="jigsawStyle">
+        <item name="columnCount">3</item>
+        <item name="rowCount">3</item>
+    </style>
+</resources>
