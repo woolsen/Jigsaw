@@ -1,4 +1,9 @@
 <resources>
     <string name="app_name">拼图</string>
     <string name="start">开始</string>
+    <string name="reset">重置</string>
+    <string name="plus">+</string>
+    <string name="minus">-</string>
+    <string name="column_count">行数</string>
+    <string name="row_count">列数</string>
 </resources>

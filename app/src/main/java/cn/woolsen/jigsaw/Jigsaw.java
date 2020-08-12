@@ -31,21 +31,24 @@ public class Jigsaw extends ViewGroup {
 
     private static final boolean DEBUG = false;
 
-    public static final int NO_MOVE = -1;
-    public static final int UP_MOVE = 1;
-    public static final int DOWN_MOVE = 2;
-    public static final int LEFT_MOVE = 3;
-    public static final int RIGHT_MOVE = 4;
+    private static final int NO_MOVE = -1;
+    private static final int UP_MOVE = 1;
+    private static final int DOWN_MOVE = 2;
+    private static final int LEFT_MOVE = 3;
+    private static final int RIGHT_MOVE = 4;
+
+
+    private static final int EMPTY_ID = 0x111;
 
     private int mRowCount;
     private int mColumnCount;
 
     private Drawable mDrawable;
 
-    private int[] mOriginIdMap;
-    private int[] mIdMap;
-    private int[] mMoveMap;
-    private View[] mImageViewMap;
+    private int[][] mOriginIdMap;
+    private int[][] mIdMap;
+    private int[][] mMoveMap;
+    private View[][] mImageViewMap;
 
     private Paint mLinePaint;
 
@@ -97,9 +100,13 @@ public class Jigsaw extends ViewGroup {
 
     private void initJigsaw() {
         removeAllViews();
-        View[] views = generateImageView(mDrawable, mRowCount, mColumnCount);
-        for (View view : views) {
-            addView(view);
+        generateImageView();
+        initOriginIdMap();
+        initIdMapAndMovementMap();
+        for (View[] views : mImageViewMap) {
+            for (View view : views) {
+                addView(view);
+            }
         }
     }
 
@@ -125,10 +132,6 @@ public class Jigsaw extends ViewGroup {
             final LayoutParams lp = (LayoutParams) child.getLayoutParams();
             final float top = 1.0f * lp.i * mPerHeight;
             final float left = 1.0f * lp.j * mPerWidth;
-//            System.out.println("left: " + (int) (left + 0.5f) +
-//                    ", top: " + (int) (top + 0.5f) +
-//                    ", right: " + (int) (left + mPerWidth + 0.5f) +
-//                    ", bottom: " + (int) (top + mPerHeight + 0.5f));
             child.layout((int) (left + 0.5f),
                     (int) (top + 0.5f),
                     (int) (left + mPerWidth + 0.5f),
@@ -160,86 +163,96 @@ public class Jigsaw extends ViewGroup {
         canvas.restore();
     }
 
-    private View[] generateImageView(Drawable drawable, int rowCount, int columnCount) {
+    /**
+     * 通过Drawable生产相对应的ImageView;
+     */
+    private void generateImageView() {
         //切割图片
-        Bitmap[] bitmaps = new Bitmap[rowCount * columnCount];
-        final int w = drawable.getIntrinsicWidth();
-        final int h = drawable.getIntrinsicHeight();
-        final float perWidth = 1f * w / columnCount;
-        final float perHeight = 1f * h / rowCount;
+        Bitmap[][] bitmaps = new Bitmap[mRowCount][mColumnCount];
+        final int w = mDrawable.getIntrinsicWidth();
+        final int h = mDrawable.getIntrinsicHeight();
+        final float perWidth = 1f * w / mColumnCount;
+        final float perHeight = 1f * h / mRowCount;
 
-        Bitmap.Config config = drawable.getOpacity() != PixelFormat.OPAQUE ?
+        Bitmap.Config config = mDrawable.getOpacity() != PixelFormat.OPAQUE ?
                 Bitmap.Config.ARGB_8888 : Bitmap.Config.RGB_565;
         Bitmap originBitmap = Bitmap.createBitmap(w, h, config);
         Canvas canvas = new Canvas(originBitmap);
-        drawable.setBounds(0, 0, w, h);
-        System.out.println("w = " + w + ", h = " + h);
-        drawable.draw(canvas);
+        mDrawable.setBounds(0, 0, w, h);
+        mDrawable.draw(canvas);
 
-        int index = 0;
-        for (int i = 0; i < rowCount; i++) {
-            for (int j = 0; j < columnCount; j++) {
-//                System.out.println("x = " + (int) (perWidth * j + 0.5f) +
-//                        ", y = " + (int) (perHeight * i + 0.5f) +
-//                        ", width = " + (int) (perWidth + 0.5f) +
-//                        ", height = " + (int) (perHeight + 0.5f));
+        for (int i = 0; i < mRowCount; i++) {
+            for (int j = 0; j < mColumnCount; j++) {
                 Bitmap bitmap = Bitmap.createBitmap(originBitmap,
                         (int) (perWidth * j),
                         (int) (perHeight * i),
                         (int) (perWidth + 0.5f),
                         (int) (perHeight + 0.5f));
-                bitmaps[index++] = bitmap;
+                bitmaps[i][j] = bitmap;
             }
         }
 
         //生成ImageView
-        mImageViewMap = new ImageView[rowCount * columnCount];
-        mIdMap = new int[rowCount * columnCount];
-        mOriginIdMap = new int[rowCount * columnCount];
-        index = 0;
-        for (int i = 0; i < rowCount; i++) {
-            for (int j = 0; j < columnCount; j++) {
+        mImageViewMap = new ImageView[mRowCount][mColumnCount];
+        for (int i = 0; i < mRowCount; i++) {
+            for (int j = 0; j < mColumnCount; j++) {
                 ImageView view = new ImageView(getContext());
                 view.setId(generateViewId());
-                view.setImageBitmap(bitmaps[index]);
+                view.setImageBitmap(bitmaps[i][j]);
                 view.setScaleType(ImageView.ScaleType.FIT_XY);
 
                 LayoutParams lp = new LayoutParams(i, j);
                 view.setLayoutParams(lp);
 
-                mIdMap[index] = view.getId();
-                mOriginIdMap[index] = view.getId();
-                mImageViewMap[index] = view;
-
-                index++;
+                mImageViewMap[i][j] = view;
             }
         }
+        mImageViewMap[mRowCount - 1][mColumnCount - 1].setId(EMPTY_ID);
+    }
 
-        mMoveMap = new int[rowCount * columnCount];
-        for (int i = 0, max = rowCount * columnCount; i < max; i++) {
-            mMoveMap[i] = NO_MOVE;
+    private void initOriginIdMap() {
+        mOriginIdMap = new int[mRowCount][mColumnCount];
+        for (View[] views : mImageViewMap) {
+            for (View view : views) {
+                LayoutParams lp = (LayoutParams) view.getLayoutParams();
+                mOriginIdMap[lp.i][lp.j] = view.getId();
+            }
         }
-        setMovement(rowCount - 2, columnCount - 1, DOWN_MOVE);
-        setMovement(rowCount - 1, columnCount - 2, RIGHT_MOVE);
-
-        return mImageViewMap;
     }
 
     private void setMovement(int i, int j, int movement) {
-        if (0 <= i && i < mRowCount && 0 <= j && j < mColumnCount) {
-            mMoveMap[i * mColumnCount + j] = movement;
+        if (checkPosition(i, j)) {
+            mMoveMap[i][j] = movement;
         }
     }
 
     private void setId(int i, int j, int id) {
-        if (0 <= i && i < mRowCount && 0 <= j && j < mColumnCount) {
-            mIdMap[i * mColumnCount + j] = id;
+        if (checkPosition(i, j)) {
+            mIdMap[i][j] = id;
         }
     }
 
     private int getMovement(View view) {
-        int position = findPositionById(view.getId());
-        return mMoveMap[position];
+        final int id = view.getId();
+        int position_i = -1;
+        int position_j = -1;
+        for (int i = 0; i < mRowCount; i++) {
+            for (int j = 0; j < mColumnCount; j++) {
+                if (mIdMap[i][j] == id) {
+                    position_i = i;
+                    position_j = j;
+                    break;
+                }
+            }
+            if (position_i != -1) {
+                break;
+            }
+        }
+        return mMoveMap[position_i][position_j];
+    }
+
+    private boolean checkPosition(int i, int j) {
+        return 0 <= i && i < mRowCount && 0 <= j && j < mColumnCount;
     }
 
     public void setRowCount(int rowCount) throws IllegalAccessException {
@@ -254,6 +267,41 @@ public class Jigsaw extends ViewGroup {
         return mRowCount;
     }
 
+    private void initIdMapAndMovementMap() {
+        mIdMap = new int[mRowCount][mColumnCount];
+        for (int i = 0; i < mRowCount; i++) {
+            for (int j = 0; j < mColumnCount; j++) {
+                final View view = mImageViewMap[i][j];
+                LayoutParams lp = (LayoutParams) view.getLayoutParams();
+                mIdMap[lp.i][lp.j] = view.getId();
+            }
+        }
+
+        int position_i = 0;
+        int position_j = 0;
+        for (int i = 0; i < mRowCount; i++) {
+            for (int j = 0; j < mColumnCount; j++) {
+                if (mIdMap[i][j] == EMPTY_ID) {
+                    position_i = i;
+                    position_j = j;
+                    break;
+                }
+            }
+            if (position_i != 0) {
+                break;
+            }
+        }
+
+        mMoveMap = new int[mRowCount][mColumnCount];
+        for (int[] ints : mMoveMap) {
+            Arrays.fill(ints, NO_MOVE);
+        }
+        setMovement(position_i, position_j - 1, RIGHT_MOVE);
+        setMovement(position_i, position_j + 1, LEFT_MOVE);
+        setMovement(position_i - 1, position_j, DOWN_MOVE);
+        setMovement(position_i + 1, position_j, UP_MOVE);
+    }
+
     public void setColumnCount(int columnCount) throws IllegalAccessException {
         if (columnCount < 3) {
             throw new IllegalAccessException("ColumnCount can't less than 3");
@@ -266,54 +314,55 @@ public class Jigsaw extends ViewGroup {
         return mColumnCount;
     }
 
+    /**
+     * 对于m*n的拼图，从拼图板块中任取三块做轮换，通过[(m*n)/3]^2次轮换，即可实现相当“乱”的打乱效果。
+     */
     public void start() {
-        if (DEBUG) {
-            debugStart();
-            return;
-        }
-        int max = mColumnCount * mRowCount - 1;
-        List<View> views = new ArrayList<>(Arrays.asList(mImageViewMap).subList(0, max));
-        Random r = new Random();
-        int index = 0;
+        List<View> views = new ArrayList<>();
         for (int i = 0; i < mRowCount; i++) {
             for (int j = 0; j < mColumnCount; j++) {
-                final int rInt = r.nextInt(views.size());
-                final View view = views.get(rInt);
-                views.remove(view);
-                LayoutParams lp = (LayoutParams) view.getLayoutParams();
-                lp.i = i;
-                lp.j = j;
-                mIdMap[index] = view.getId();
-                index++;
-                if (index == max) {
-                    break;
-                }
+                views.add(mImageViewMap[i][j]);
             }
         }
-        mImageViewMap[max].setVisibility(GONE);
+        views.remove(views.size() - 1);
+
+        Random r = new Random();
+
+        int swapCount = ((mColumnCount * mRowCount) / 3) * ((mColumnCount * mRowCount) / 3);
+
+        while (swapCount-- != 0) {
+            final View view1 = views.get(r.nextInt(views.size()));
+            views.remove(view1);
+            final View view2 = views.get(r.nextInt(views.size()));
+            views.remove(view2);
+            final View view3 = views.get(r.nextInt(views.size()));
+            views.remove(view3);
+            swapParamLayout(view1, view2, view3);
+            views.add(view1);
+            views.add(view2);
+            views.add(view3);
+        }
+
+        initIdMapAndMovementMap();
+
+        mImageViewMap[mRowCount - 1][mColumnCount - 1].setVisibility(GONE);
         requestLayout();
     }
 
-    private void debugStart() {
-        int max = mColumnCount * mRowCount - 1;
-        int index = 0;
-        for (int i = 0; i < mRowCount; i++) {
-            for (int j = 0; j < mColumnCount; j++) {
-                final View view = mImageViewMap[index];
-                LayoutParams lp = (LayoutParams) view.getLayoutParams();
-                lp.i = i;
-                lp.j = j;
-                mIdMap[index] = view.getId();
-                index++;
-                if (index == max) {
-                    break;
-                }
-            }
-        }
-        mImageViewMap[max].setVisibility(GONE);
-        requestLayout();
-        resolveMovement(mImageViewMap[max-1]);
+    public void reset() {
+        initJigsaw();
     }
+
+    /**
+     * 交换ImageView的LayoutParams
+     */
+    private void swapParamLayout(View view1, View view2, View view3) {
+        ViewGroup.LayoutParams lp1 = view1.getLayoutParams();
+        view1.setLayoutParams(view2.getLayoutParams());
+        view2.setLayoutParams(view3.getLayoutParams());
+        view3.setLayoutParams(lp1);
+    }
+
 
     @Override
     public boolean onInterceptTouchEvent(MotionEvent ev) {
@@ -329,9 +378,11 @@ public class Jigsaw extends ViewGroup {
     }
 
     public boolean isSuccess() {
-        for (int i = 0, max = mRowCount * mColumnCount - 1; i < max; i++) {
-            if (mOriginIdMap[i] != mIdMap[i]) {
-                return false;
+        for (int i = 0; i < mRowCount; i++) {
+            for (int j = 0; j < mColumnCount; j++) {
+                if (mOriginIdMap[i][j] != mIdMap[i][j]) {
+                    return false;
+                }
             }
         }
         return true;
@@ -349,13 +400,13 @@ public class Jigsaw extends ViewGroup {
     private void resolveMovement(View child) {
 
         final int id = child.getId();
-        final int position = findPositionById(id);
-        final int origin_i = position / mColumnCount;
-        final int origin_j = position % mColumnCount;
+        final IJ position = findPositionById(id);
+        final int origin_i = position.i;
+        final int origin_j = position.j;
         int final_i = origin_i;
         int final_j = origin_j;
 
-        final int movement = mMoveMap[position];
+        final int movement = mMoveMap[origin_i][origin_j];
         switch (movement) {
             case LEFT_MOVE: {
                 final_j = origin_j - 1;
@@ -381,7 +432,7 @@ public class Jigsaw extends ViewGroup {
         lp.i = final_i;
         lp.j = final_j;
 
-        setId(origin_i, origin_j, -1);
+        setId(origin_i, origin_j, EMPTY_ID);
         setId(final_i, final_j, id);
 
         setMovement(final_i - 1, final_j, NO_MOVE);
@@ -395,29 +446,36 @@ public class Jigsaw extends ViewGroup {
         setMovement(origin_i, origin_j - 1, RIGHT_MOVE);
         setMovement(origin_i, origin_j + 1, LEFT_MOVE);
 
+        System.out.println("Origin: ");
+        printMap(mOriginIdMap);
+        System.out.println("Current: ");
+        printMap(mIdMap);
+
         if (isSuccess() && mOnSuccessListener != null) {
-            mImageViewMap[mImageViewMap.length - 1].setVisibility(VISIBLE);
+            mImageViewMap[mRowCount - 1][mColumnCount - 1].setVisibility(VISIBLE);
             requestLayout();
             mOnSuccessListener.onSuccess();
         }
     }
 
-    private int findPositionById(int id) {
-        for (int i = 0, max = mRowCount * mColumnCount; i < max; i++) {
-            if (mIdMap[i] == id) {
-                return i;
+    private IJ findPositionById(int id) {
+        for (int i = 0; i < mRowCount; i++) {
+            for (int j = 0; j < mColumnCount; j++) {
+                if (mIdMap[i][j] == id) {
+                    return new IJ(i, j);
+                }
             }
         }
-        return -1;
+        return new IJ(-1, -1);
     }
 
-    private void printMoveMap() {
+    private void printMap(int[][] map) {
         StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < mColumnCount * mRowCount; i++) {
-            sb.append(mMoveMap[i]).append("  ");
-            if ((i + 1) % mColumnCount == 3) {
-                sb.append("\n");
+        for (int[] ints : map) {
+            for (int a : ints) {
+                sb.append(a).append("  ");
             }
+            sb.append("\n");
         }
         System.out.println("\n" + sb);
     }
@@ -553,5 +611,15 @@ public class Jigsaw extends ViewGroup {
 
     public interface OnSuccessListener {
         void onSuccess();
+    }
+
+    private static class IJ {
+        int i;
+        int j;
+
+        public IJ(int i, int j) {
+            this.i = i;
+            this.j = j;
+        }
     }
 }

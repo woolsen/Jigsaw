@@ -18,14 +18,26 @@
         app:layout_constraintTop_toTopOf="parent"
         app:rowCount="3" />
 
+
     <Button
         android:id="@+id/btn_start"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="@string/start"
-        app:layout_constraintEnd_toEndOf="@+id/jigsaw"
+        app:layout_constraintEnd_toStartOf="@+id/btn_reset"
+        app:layout_constraintHorizontal_bias="0.155"
         app:layout_constraintStart_toStartOf="@+id/jigsaw"
+        app:layout_constraintTop_toBottomOf="@+id/jigsaw" />
+
+    <Button
+        android:id="@+id/btn_reset"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/reset"
+        app:layout_constraintEnd_toEndOf="@+id/jigsaw"
+        app:layout_constraintStart_toEndOf="@id/btn_start"
         app:layout_constraintTop_toBottomOf="@+id/jigsaw" />
 
     <TextView
@@ -33,7 +45,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="行数"
+        android:text="@string/column_count"
         android:textColor="#000"
         app:layout_constraintEnd_toEndOf="@+id/btn_row_minus"
         app:layout_constraintStart_toStartOf="@id/btn_row_plus"
@@ -43,7 +55,7 @@
         android:id="@+id/btn_row_plus"
         android:layout_width="32dp"
         android:layout_height="wrap_content"
-        android:text="+"
+        android:text="@string/plus"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tv_row_text" />
 
@@ -63,7 +75,7 @@
         android:layout_width="32dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:text="-"
+        android:text="@string/minus"
         app:layout_constraintBottom_toBottomOf="@id/btn_row_plus"
         app:layout_constraintStart_toEndOf="@id/tv_row"
         app:layout_constraintTop_toTopOf="@id/btn_row_plus" />
@@ -73,7 +85,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
-        android:text="列数"
+        android:text="@string/row_count"
         android:textColor="#000"
         app:layout_constraintEnd_toEndOf="@+id/btn_column_minus"
         app:layout_constraintStart_toStartOf="@id/btn_column_plus"
@@ -84,7 +96,7 @@
         android:layout_width="32dp"
         android:layout_height="wrap_content"
         android:layout_marginEnd="8dp"
-        android:text="+"
+        android:text="@string/plus"
         app:layout_constraintBottom_toBottomOf="@+id/btn_column_minus"
         app:layout_constraintEnd_toStartOf="@id/tv_column"
         app:layout_constraintTop_toTopOf="@+id/btn_column_minus" />
@@ -104,7 +116,7 @@
         android:id="@+id/btn_column_minus"
         android:layout_width="32dp"
         android:layout_height="wrap_content"
-        android:text="-"
+        android:text="@string/minus"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tv_column_text" />
 

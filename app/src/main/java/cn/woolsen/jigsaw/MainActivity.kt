@@ -10,7 +10,6 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-//        jigsaw.start()
         jigsaw.setOnSuccessListener {
             Toast.makeText(this, "Win!!!", Toast.LENGTH_SHORT).show()
         }
@@ -20,6 +19,10 @@ class MainActivity : AppCompatActivity() {
 
         tv_column.text = jigsaw.columnCount.toString()
         tv_row.text = jigsaw.rowCount.toString()
+
+        btn_reset.setOnClickListener {
+            jigsaw.reset()
+        }
 
         btn_column_minus.setOnClickListener {
             if (jigsaw.columnCount == 3) {
